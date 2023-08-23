@@ -1,0 +1,61 @@
+
+read -r -d '' extract_tldr_perl <<'EOC'
+use strict ; use warnings ;
+use v5.10 ;
+
+my @header ;
+
+/^-/ and @_ = ($_, <STDIN>) or push @header, $_ while <STDIN> ;
+
+my $max_example_length = 0 ;
+
+while( @_ )
+	{
+	(my $description, $a, my $example, $b) = map { $_ // "" } splice @_, 0, 4 ;
+
+	$b //= "" ;
+	chomp ($description, $a, $example, $b) ;
+
+	$description =~ s/\s*-\s*// ;
+
+	$example =~ s/^`// ;
+	$example =~ s/`$// ;
+
+	my $example_length  = length $example ;
+	$max_example_length = $example_length if $example_length > $max_example_length ;
+
+	$_{$description} = $example ;
+	}
+
+do { shift @header ; shift @header ; print map { s/^..// ; "\e[2;40;39m$_\e[0m" } @header } unless $ARGV[0] ;
+
+for(keys %_)
+	{
+	my $line = sprintf "%-${max_example_length}s", $_{$_} ;
+	
+	$line =~ s/(\s-[^ ]+)/\e[2;33m$1\e[m/g ;
+	$line =~ s/( \{\{ .+? \}\} )/\e[36m$1\e[m/xg ;
+
+	$ARGV[0] && say $line, " \e[34m# $_\e[m" or say "\e[34m# $_\e[m\n\n    $line\n" ;
+	}
+
+#! vim: set ft=perl:
+EOC
+fs="$(mktemp -u -p /tmp/$USER tldr_XXXXXX)" ; mkdir -p $fs # work directory
+
+COMMAND=$fs/tldr_tmp
+COMMAND_EXAMPLES=$fs/tldr_tmp_command_example
+COMMAND_TO_EDIT=$fs/tldr_tmp_command_to_edit.tldr
+COMMAND_EDITED=$fs/tldr_tmp_command_edited
+
+for f in $COMMAND $COMMAND_EXAMPLE $COMMAND_TO_EDIT $COMMAND_EDITED ; do :>$f ; done
+
+tldr --list | fzf --no-clear --preview "tldr -r {1} | perl -e '$extract_tldr_perl'" --preview-window=right,80% >$COMMAND || tput rmcup
+
+[[ -s $COMMAND ]]          && <$COMMAND xargs -n1 tldr -r >$COMMAND_EXAMPLES
+[[ -s $COMMAND_EXAMPLES ]] && <$COMMAND_EXAMPLES perl -e "$extract_tldr_perl" 1 | fzf +m --ansi --query "$(head $COMMAND) " >$COMMAND_TO_EDIT
+[[ -s $COMMAND_TO_EDIT ]]  && perl -pe 's/(.*)\s+#(.*)/#$2\n\1/' $COMMAND_TO_EDIT | sponge $COMMAND_TO_EDIT 
+[[ -s $COMMAND_TO_EDIT ]]  && $EDITOR -c 'set nospell|set ft=bash' $COMMAND_TO_EDIT && cat $COMMAND_TO_EDIT | perl -ne 'print unless /^$/ || /^#/'
+
+# vim: set ft=bash:
+
