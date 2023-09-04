@@ -1,19 +1,2 @@
 
-search all entries
-	but why?
-
-search all entries in user defined entries
-
-scroll up and down in preview
-
-replace labels 
-	# vim
-	file manager or vim fm
-
-d provide aliases
-
-Non-intrusive (inline) and full-screen interfaces
-
-Fetch command to parse and store tldr pages (Thanks to them!)
-
-Portability. You can use bookmarked commands in any supported shell, as well as exporting and importing elsewhere.
+inline interfaces

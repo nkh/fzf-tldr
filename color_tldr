@@ -1,0 +1,53 @@
+#!/bin/env perl
+
+use strict ; use warnings ;
+use v5.10 ;
+sub defined_or ;
+
+my ($file) = shift @ARGV ;
+my ( $flatten, $extra_line, $show_header, $header_color, $comment_color, $option_color, $placeholder_color ) = defined_or \@ARGV,
+   ( 0,        0,           1,            37,            34,             33,            '1;33'             ) ;
+
+$extra_line = $extra_line ? "\n" : '' ;
+
+my $fh ; $file eq '-' ? $fh = *STDIN : open $fh, "<", $file or die "color_tldr: can't open '$file'\n" ;
+
+my @header ;
+/^-/ and @_ = ($_, <$fh>) or push @header, $_ while <$fh> ;
+
+my $max_example_length = 0 ;
+
+while( @_ )
+	{
+	(my $description, $a, my $example, $b) = map { $_ // "" } splice @_, 0, 4 ;
+
+	$b //= "" ;
+	chomp ($description, $a, $example, $b) ;
+
+	$description =~ s/\s*-\s*// ;
+
+	$example =~ s/^`// ;
+	$example =~ s/`$// ;
+
+	my $example_length  = length $example ;
+	$max_example_length = $example_length if $example_length > $max_example_length ;
+
+	$_{$description} = $example ;
+	}
+
+do { shift @header ; shift @header ; print map { s/^..// ; "\e[${header_color}m$_\e[m" } @header } unless $flatten || !$show_header ;
+
+for(sort keys %_)
+	{
+	my $line = sprintf "%-${max_example_length}s", $_{$_} ;
+	
+	$line =~ s/(\s-[^ ]+)/\e[${option_color}m$1\e[m/g ;
+	$line =~ s/( \{\{ .+? \}\} )/\e[${placeholder_color}m$1\e[m/xg ;
+
+	$flatten && say $line, " \e[${comment_color}m# $_\e[m" or say "\e[${comment_color}m# $_\e[m\n$extra_line    $line\n" ;
+	}
+
+sub defined_or { my ($l, @d) = @_ ; (map { $b = shift @d ; $_ // $b } @$l), @d }
+
+#! vim: set ft=perl:
+

@@ -1,61 +1,27 @@
+LIST_TLDR()   { [[ "$TLDR_PAGES" ]]   && find $TLDR_PAGES -type f -printf '%f\n'   | sed 's/\.md$//' ; }
+LIST_CUSTOM() { [[ "$CUSTOM_PAGES" ]] && find $CUSTOM_PAGES -type f -printf '%f\n' | sed 's/\.md$//' ; }
+PREVIEW()     { color_tldr "$(LU_FILE "$1")" 0 0 0 ; }
+FLATTEN()     { color_tldr "$(LU_FILE "$1")" 1 ; }
+LU_FILE()     { for p in $CUSTOM_PAGES $TLDR_PAGES ; do [[ -e "$p/$1.md" ]] && { echo "$p/$1.md" ; break ; } ; done ; }
 
-read -r -d '' extract_tldr_perl <<'EOC'
-use strict ; use warnings ;
-use v5.10 ;
+export    TLDR_PAGES=   CUSTOM_PAGES= 
+export -f PREVIEW 
+export -f LU_FILE
 
-my @header ;
+fs="$(mktemp -u -p /tmp/$USER/tldr/ tldr_XXXXXX)" ; mkdir -p $fs # work directory
+COMMAND=$fs/command ; EXAMPLES=$fs/examples ; TO_EDIT=$fs/to_edit.tldr ; EDITED=$fs/edited
 
-/^-/ and @_ = ($_, <STDIN>) or push @header, $_ while <STDIN> ;
+[[ -e ~/.config/fzf-tldr ]] && source ~/.config/fzf-tldr # read configuration
 
-my $max_example_length = 0 ;
+{ LIST_TLDR ; LIST_CUSTOM ; } | fzf --query "$1" --no-clear --preview "PREVIEW {1}" --preview-window=right,80% >$COMMAND || tput rmcup
 
-while( @_ )
-	{
-	(my $description, $a, my $example, $b) = map { $_ // "" } splice @_, 0, 4 ;
+# clear ; echo $(LU_FILE "$(head -1 $COMMAND)") ; exit
 
-	$b //= "" ;
-	chomp ($description, $a, $example, $b) ;
+[[ -s $COMMAND ]]  && FLATTEN "$(head -1 $COMMAND)" >>$EXAMPLES
+[[ -s $EXAMPLES ]] && <$EXAMPLES fzf +m --ansi --query '' | perl -pe 's/(.*)\s+#(.*)/#$2\n\1/ ; s/\s+$//' > $TO_EDIT
+[[ -s $TO_EDIT ]]  && $EDITOR -c 'set nospell|set ft=bash' $TO_EDIT && <$TO_EDIT perl -ne 'print unless /^$/ || /^#/'
 
-	$description =~ s/\s*-\s*// ;
-
-	$example =~ s/^`// ;
-	$example =~ s/`$// ;
-
-	my $example_length  = length $example ;
-	$max_example_length = $example_length if $example_length > $max_example_length ;
-
-	$_{$description} = $example ;
-	}
-
-do { shift @header ; shift @header ; print map { s/^..// ; "\e[2;40;39m$_\e[0m" } @header } unless $ARGV[0] ;
-
-for(keys %_)
-	{
-	my $line = sprintf "%-${max_example_length}s", $_{$_} ;
-	
-	$line =~ s/(\s-[^ ]+)/\e[2;33m$1\e[m/g ;
-	$line =~ s/( \{\{ .+? \}\} )/\e[36m$1\e[m/xg ;
-
-	$ARGV[0] && say $line, " \e[34m# $_\e[m" or say "\e[34m# $_\e[m\n\n    $line\n" ;
-	}
-
-#! vim: set ft=perl:
-EOC
-fs="$(mktemp -u -p /tmp/$USER tldr_XXXXXX)" ; mkdir -p $fs # work directory
-
-COMMAND=$fs/tldr_tmp
-COMMAND_EXAMPLES=$fs/tldr_tmp_command_example
-COMMAND_TO_EDIT=$fs/tldr_tmp_command_to_edit.tldr
-COMMAND_EDITED=$fs/tldr_tmp_command_edited
-
-for f in $COMMAND $COMMAND_EXAMPLE $COMMAND_TO_EDIT $COMMAND_EDITED ; do :>$f ; done
-
-tldr --list | fzf --no-clear --preview "tldr -r {1} | perl -e '$extract_tldr_perl'" --preview-window=right,80% >$COMMAND || tput rmcup
-
-[[ -s $COMMAND ]]          && <$COMMAND xargs -n1 tldr -r >$COMMAND_EXAMPLES
-[[ -s $COMMAND_EXAMPLES ]] && <$COMMAND_EXAMPLES perl -e "$extract_tldr_perl" 1 | fzf +m --ansi --query "$(head $COMMAND) " >$COMMAND_TO_EDIT
-[[ -s $COMMAND_TO_EDIT ]]  && perl -pe 's/(.*)\s+#(.*)/#$2\n\1/' $COMMAND_TO_EDIT | sponge $COMMAND_TO_EDIT 
-[[ -s $COMMAND_TO_EDIT ]]  && $EDITOR -c 'set nospell|set ft=bash' $COMMAND_TO_EDIT && cat $COMMAND_TO_EDIT | perl -ne 'print unless /^$/ || /^#/'
+[[ "$2" ]] && <$TO_EDIT perl -ne 'print unless /^$/ || /^#/' >"$2"
 
 # vim: set ft=bash:
 
