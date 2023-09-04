@@ -1,0 +1,14 @@
+#!/bin/bash
+
+P=$(mktemp -u) 
+:>$P
+
+tmux new-window "fzf-tldr '' $P ; tmux wait -S fzf-tldr_$$" 
+tmux wait fzf-tldr_$$
+
+{
+buffer="$(<$P perl -pe 's/\s+$//')"
+rm $P
+
+[[ "$buffer" ]] && sleep .1 ; tmux send-keys "$buffer"
+} &

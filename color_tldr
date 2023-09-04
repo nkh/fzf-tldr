@@ -15,7 +15,10 @@ my $fh ; $file eq '-' ? $fh = *STDIN : open $fh, "<", $file or die "color_tldr: 
 my @header ;
 /^-/ and @_ = ($_, <$fh>) or push @header, $_ while <$fh> ;
 
+my $max_description_length = 0 ;
 my $max_example_length = 0 ;
+
+my @descriptions ;
 
 while( @_ )
 	{
@@ -26,25 +29,31 @@ while( @_ )
 
 	$description =~ s/\s*-\s*// ;
 
+	my $description_length  = length $description ;
+	$max_description_length = $description_length if $description_length > $max_description_length ;
+
 	$example =~ s/^`// ;
 	$example =~ s/`$// ;
 
 	my $example_length  = length $example ;
 	$max_example_length = $example_length if $example_length > $max_example_length ;
 
-	$_{$description} = $example ;
+	push @descriptions, [$description, $example] ;
 	}
 
 do { shift @header ; shift @header ; print map { s/^..// ; "\e[${header_color}m$_\e[m" } @header } unless $flatten || !$show_header ;
 
-for(sort keys %_)
+for(@descriptions)
 	{
-	my $line = sprintf "%-${max_example_length}s", $_{$_} ;
+	my ($description, $example) = @$_ ;
+	my $line = sprintf "%-${max_example_length}s", $example ;
 	
 	$line =~ s/(\s-[^ ]+)/\e[${option_color}m$1\e[m/g ;
 	$line =~ s/( \{\{ .+? \}\} )/\e[${placeholder_color}m$1\e[m/xg ;
 
-	$flatten && say $line, " \e[${comment_color}m# $_\e[m" or say "\e[${comment_color}m# $_\e[m\n$extra_line    $line\n" ;
+	# $flatten && say $line, " \e[${comment_color}m# $_\e[m" 
+	$flatten && say sprintf("\e[${comment_color}m%-${max_description_length}s > \e[m%s", $description, $line) 
+		or say "\e[${comment_color}m# $description\e[m\n$extra_line    $line\n" ;
 	}
 
 sub defined_or { my ($l, @d) = @_ ; (map { $b = shift @d ; $_ // $b } @$l), @d }
