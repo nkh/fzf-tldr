@@ -28,13 +28,14 @@ COMMAND=$fs/command ; EXAMPLES=$fs/examples ; TO_EDIT=$fs/to_edit.tldr ; SCROLL=
 		--query "$1" --no-clear --preview 'PREVIEW {1}' --preview-window=right,80% >$COMMAND || tput rmcup
 
 [[ -s $COMMAND ]]  && FLATTEN "$(head -1 $COMMAND)" >>$EXAMPLES
-[[ -s $EXAMPLES ]] && <$EXAMPLES fzf --tiebreak=index +m --ansi --query '' | perl -pe 's/\s+$// ; s/(.*)\s+> (.*)/# $1\n$2/' > $TO_EDIT
+[[ -s $EXAMPLES ]] && <$EXAMPLES fzf --tiebreak=index -m --ansi --query '' | \
+			perl -pe '/^\s*$/ and next ; $f and s/^(.*)\s+> // or do { $f++ ; s/^(.*)\s+> /# $1\n/ }' > $TO_EDIT
 
-grep '{{' $TO_EDIT >/dev/null && { $EDITOR -c 'set nospell|set ft=bash' $TO_EDIT || :>$TO_EDIT ; }
+grep '{{' $TO_EDIT >/dev/null && { $EDITOR -c 'set nospell|set ft=bash' +TldrNext $TO_EDIT || :>$TO_EDIT ; }
 
 [[ -s $TO_EDIT ]] && 
 	{
-	<$TO_EDIT perl -ne 'print unless /^$/ || /^#/' && echo
+	<$TO_EDIT perl -ne 'print unless /^\s*$/ || /^#/'
 	[[ "$2" ]] && <$TO_EDIT perl -ne 'print unless /^$/ || /^#/' >"$2" 
 	true
 	}

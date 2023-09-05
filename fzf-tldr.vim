@@ -10,13 +10,9 @@ endfunction
 
 command! TldrNext call SearchWithPattern('{{.\{-}}}')
 
-function! NextTldrPattern()
-	let result = search('{{.\{-}}}', 'W')
-
-	if result > 0
-		execute "normal vf}ld"
-		startinsert
-	endif
+function! FixTldrPattern()
+	execute "normal vf}ld"
+	startinsert
 endfunction
 
 function! IsOnPlaceholder()
@@ -33,5 +29,5 @@ function! IsOnPlaceholder()
 	endif
 endfunction
 
-command! TldrFix call NextTldrPattern()
+command! TldrFix call FixTldrPattern()
 

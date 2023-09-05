@@ -15,44 +15,53 @@ my $fh ; $file eq '-' ? $fh = *STDIN : open $fh, "<", $file or die "color_tldr: 
 my @header ;
 /^-/ and @_ = ($_, <$fh>) or push @header, $_ while <$fh> ;
 
-my $max_description_length = 0 ;
-my $max_example_length = 0 ;
+my ($max_description_length, $max_example_length) = (0, 0) ;
 
 my @descriptions ;
 
 while( @_ )
 	{
-	(my $description, $a, my $example, $b) = map { $_ // "" } splice @_, 0, 4 ;
+	my $description = shift @_ ;
+	chomp $description ;
 
-	$b //= "" ;
-	chomp ($description, $a, $example, $b) ;
+	$max_description_length = length $description if length $description > $max_description_length ;
 
-	$description =~ s/\s*-\s*// ;
+	my @examples ;
+	while( @_ )
+		{
+		last if $_[0] =~ /^-/ ; # new entry
 
-	my $description_length  = length $description ;
-	$max_description_length = $description_length if $description_length > $max_description_length ;
+		$_ = shift @_ ;
+		s/^`// ;
+		s/`$// ;
+		next if /^\s*$/ ; 
 
-	$example =~ s/^`// ;
-	$example =~ s/`$// ;
+		$max_example_length = length $_ if length $_ > $max_example_length ;
 
-	my $example_length  = length $example ;
-	$max_example_length = $example_length if $example_length > $max_example_length ;
+		push @examples, $_ ;
+		}
 
-	push @descriptions, [$description, $example] ;
+	push @descriptions, [$description, \@examples] ;
 	}
 
 do { shift @header ; shift @header ; print map { s/^..// ; "\e[${header_color}m$_\e[m" } @header } unless $flatten || !$show_header ;
 
 for(@descriptions)
 	{
-	my ($description, $example) = @$_ ;
-	my $line = sprintf "%-${max_example_length}s", $example ;
-	
-	$line =~ s/(\s-[^ ]+)/\e[${option_color}m$1\e[m/g ;
-	$line =~ s/( \{\{ .+? \}\} )/\e[${placeholder_color}m$1\e[m/xg ;
+	my ($description, $examples) = @$_ ;
 
-	$flatten && say sprintf("\e[${comment_color}m%-${max_description_length}s > \e[m%s", $description, $line) 
-		or say "\e[${comment_color}m# $description\e[m\n$extra_line    $line\n" ;
+	$flatten or say "\e[${comment_color}m# $description\e[m$extra_line" ;
+
+	for (@$examples)
+		{
+		s/(\s-[^ ]+)/\e[${option_color}m$1\e[m/g ;
+		s/( \{\{ .+? \}\} )/\e[${placeholder_color}m$1\e[m/xg ;
+		
+		$flatten and printf("\e[${comment_color}m%-${max_description_length}s > \e[m%s", $description, $_) 
+			 or  print "    $_" ;
+		}
+	
+	$flatten or say '' ;
 	}
 
 sub defined_or { my ($l, @d) = @_ ; (map { $b = shift @d ; $_ // $b } @$l), @d }

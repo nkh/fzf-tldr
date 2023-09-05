@@ -1,8 +1,6 @@
 
 scroll and select directly in first preview
 
-multi line tldr/snippet
-
 import to file
 	different command?
 
