@@ -51,7 +51,6 @@ for(@descriptions)
 	$line =~ s/(\s-[^ ]+)/\e[${option_color}m$1\e[m/g ;
 	$line =~ s/( \{\{ .+? \}\} )/\e[${placeholder_color}m$1\e[m/xg ;
 
-	# $flatten && say $line, " \e[${comment_color}m# $_\e[m" 
 	$flatten && say sprintf("\e[${comment_color}m%-${max_description_length}s > \e[m%s", $description, $line) 
 		or say "\e[${comment_color}m# $description\e[m\n$extra_line    $line\n" ;
 	}

@@ -3,12 +3,10 @@
 P=$(mktemp -u) 
 :>$P
 
-tmux new-window "fzf-tldr '' $P ; tmux wait -S fzf-tldr_$$" 
-tmux wait fzf-tldr_$$
+fzf-tldr '' $P  
 
-{
 buffer="$(<$P perl -pe 's/\s+$//')"
 rm $P
 
-[[ "$buffer" ]] && sleep .1 ; tmux send-keys "$buffer"
-} &
+destination_pane="$(</tmp/tmux_fzf-tldr_destination_pane)" 
+[[ "$buffer" ]] && sleep .1 ; tmux send-keys -t $destination_pane "$buffer"

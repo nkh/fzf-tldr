@@ -14,16 +14,29 @@ export -f PREVIEW
 export -f LU_FILE
 
 fs="$(mktemp -u -p /tmp/$USER/tldr/ tldr_XXXXXX)" ; mkdir -p $fs # work directory
-COMMAND=$fs/command ; EXAMPLES=$fs/examples ; TO_EDIT=$fs/to_edit.tldr ; EDITED=$fs/edited
+COMMAND=$fs/command ; EXAMPLES=$fs/examples ; TO_EDIT=$fs/to_edit.tldr ; SCROLL=$fs/scroll
+:>$TO_EDIT
 
 [[ -e ~/.config/fzf-tldr ]] && source ~/.config/fzf-tldr # read configuration
 
-{ LIST_TLDR ; LIST_CUSTOM ; } | fzf --query "$1" --no-clear --preview "PREVIEW {1}" --preview-window=right,80% >$COMMAND || tput rmcup
+# fzf's refresh preview resets scroll position, https://github.com/junegunn/fzf/issues/3429
+# --bind "alt-k:execute-silent(echo up >>$SCROLL)+preview-up+refresh-preview,alt-j:execute-silent(echo down >>$SCROLL)+preview-down+refresh-preview" \
+
+{ LIST_TLDR ; LIST_CUSTOM ; } | 
+	fzf \
+		--bind "alt-k:preview-up,alt-j:preview-down" \
+		--query "$1" --no-clear --preview 'PREVIEW {1}' --preview-window=right,80% >$COMMAND || tput rmcup
 
 [[ -s $COMMAND ]]  && FLATTEN "$(head -1 $COMMAND)" >>$EXAMPLES
 [[ -s $EXAMPLES ]] && <$EXAMPLES fzf --tiebreak=index +m --ansi --query '' | perl -pe 's/\s+$// ; s/(.*)\s+> (.*)/# $1\n$2/' > $TO_EDIT
-[[ -s $TO_EDIT ]]  && $EDITOR -c 'set nospell|set ft=bash' $TO_EDIT && <$TO_EDIT perl -ne 'print unless /^$/ || /^#/' && echo
 
-[[ "$2" ]] && <$TO_EDIT perl -ne 'print unless /^$/ || /^#/' >"$2"
+grep '{{' $TO_EDIT >/dev/null && { $EDITOR -c 'set nospell|set ft=bash' $TO_EDIT || :>$TO_EDIT ; }
+
+[[ -s $TO_EDIT ]] && 
+	{
+	<$TO_EDIT perl -ne 'print unless /^$/ || /^#/' && echo
+	[[ "$2" ]] && <$TO_EDIT perl -ne 'print unless /^$/ || /^#/' >"$2" 
+	true
+	}
 
 # vim: set ft=bash:
