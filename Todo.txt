@@ -1,6 +1,8 @@
 
 scroll and select directly in first preview
 
+lxterminal --tabs={{tab_name1,tab_name2,...}}
+
 import to file
 	different command?
 

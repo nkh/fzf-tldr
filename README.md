@@ -1,31 +1,30 @@
 # NAME
 
-    fzf-tldr - unorthodox tldr client
+    fzf-tldr - an unorthodox tldr/snippet client
 
 # SYNOPSIS
 
-    fzf-tldr
+    fzf-tldr [command_query]
 
 # DESCRIPTION
 
-A tldr client which uses other tools to do the job.
-
-If you want a polished client look into *See Also* below 
+A non-conformist tldr. Look in the **See Also** section below if you want a polished client.
 
 As the names hints, **fzf-tldr** uses, the outstanding, fzf to do some of the work.
 
-What makes it unorthodox?
+What makes it different from other tldr client?
 
 - tldr pages are neither downloaded nor update automatically
-- you can use git for updates, which is much faster than other clients
-- you can have custom pages, anywhere you want
-- you can edit the chosen example in vim, with gratitude to Bram Moolenaar
-- you can use colors you like, 
+    - you can use git for updates, which is much faster than other clients (remember to clone shallow)
+- custom pages
+- multi-line examples
+- placeholders are edited in vim, with gratitude to Bram Moolenaar
+- user defined color
 
 *fzf-tldr* uses a three stage process
 - select a command
-- select an example
-- modify the example
+- select one or more examples
+- modify the example in vim if the examples contain placeholders
 
 The result is output on stdout. 
 
@@ -43,11 +42,13 @@ The result is output on stdout.
 
 # Vim INTEGRATION
 
-Adding the following code to your *.vimrc* will:
-- source fzf-tldr functions
-- add "F3" binding which moves to the next placeholder
-- add "F6" binding which move to the next placeholder, delete it and start insert mode
+Examples containing placeholders are opened in vim.
 
+The placeholders will be highlighted.
+
+Optionally adding the following code to your *.vimrc* will:
+- source the fzf-tldr vimscript
+- bind "F3", or any key you like, to TldrFixall
 
 ```
 " fzf-tldr ------------------------------------------------------
@@ -55,21 +56,45 @@ Adding the following code to your *.vimrc* will:
 source $REPO_PATH/fzf-tldr.vim
 
 au BufRead,BufNewFile *.tldr set filetype=tldr
-autocmd FileType tldr nnoremap <buffer> <F3> :TldrNext<CR>
-autocmd FileType tldr nnoremap <buffer> <F6> :TldrFix<CR>
+autocmd FileType tldr nnoremap <buffer> <F3> :TldrFixAll<CR>
+
+"optional TldrNext, find next placeholder
+"optional TldrFix,  fix the placeholder under cursor
 ```
+
+## TldrFixAll
+
+A vimscript which will fin all the placeholders and ask for a replacement string.
+
+If the placeholder is found multiple times, all occurrences will be replaced in interactive mode; press y/n/a/q as usual in vim. 
 
 # CONFIGURATION
 
-In $HOME/.config/fzf-tldr
+In ***$HOME/.config/fzf-tldr***
 
 ```
-# location for you custom tldr pages
+# minimu config: one of the page locations
+
+# location for custom tldr pages
 CUSTOM_PAGES='/home/.../custom_tldr/'
 
-# multiple locations for the official tldr pages
+# multiple locations for tldr pages
 TLDR_PAGES='/home/.../tldr/pages/linux /home/.../tldr/pages/common/'
+
+# colors
+HEADER_COLOR=37
+COMMENT_COLOR=34
+OPTION_COLOR=33
+PLACEHOLDER_COLOR='1;43'
 ```
+
+# INSTALL
+
+*fzf-tldr* consists of these files:
+- $HOME/.config/fzf-tldr, see # CONFIGURATION above
+- fzf-tldr, to be copied in your path
+- color_tldr, to be copied in your path
+    - this can be used to color or flatten the tldr/custom pages without using fzf-tldr
 
 # DEPENDENCIES
 

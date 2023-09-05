@@ -1,7 +1,13 @@
+fs="$(mktemp -u -p /tmp/$USER/tldr/ tldr_XXXXXX)" ; mkdir -p $fs # work directory
+COMMAND=$fs/command ; EXAMPLES=$fs/examples ; TO_EDIT=$fs/to_edit.tldr ; SCROLL=$fs/scroll
+:>$TO_EDIT
+
+[[ -e ~/.config/fzf-tldr ]] && source ~/.config/fzf-tldr # read configuration
+
 LIST_TLDR()   { [[ "$TLDR_PAGES" ]]   && find $TLDR_PAGES -type f -printf '%f\n'   | sed 's/\.md$//' ; }
 LIST_CUSTOM() { [[ "$CUSTOM_PAGES" ]] && find $CUSTOM_PAGES -type f -printf '%f___\n' | sed 's/\.md//' ; }
-PREVIEW()     { color_tldr "$(LU_FILE "$1")" 0 0 0 ; }
-FLATTEN()     { color_tldr "$(LU_FILE "$1")" 1 ; }
+PREVIEW()     { color_tldr "$(LU_FILE "$1")" 0 0 0 ${HEADER_COLOR:-37} ${COMMENT_COLOR:-34} ${OPTION_COLOR:-33} ${PLACEHOLDER_COLOR:-1;33} ; }
+FLATTEN()     { color_tldr "$(LU_FILE "$1")" 1 0 0 ${HEADER_COLOR:-37} ${COMMENT_COLOR:-34} ${OPTION_COLOR:-33} ${PLACEHOLDER_COLOR:-1;33} ; }
 LU_FILE()
 {
 [[ "$1" =~ "___" ]] && { echo "$CUSTOM_PAGES/${1/___/}.md" ;  return ; }
@@ -9,15 +15,9 @@ LU_FILE()
 for p in $TLDR_PAGES ; do [[ -e "$p/$1.md" ]] && { echo "$p/$1.md" ; break ; } ; done
 }
 
-export    TLDR_PAGES=   CUSTOM_PAGES= 
+export    TLDR_PAGES CUSTOM_PAGES HEADER_COLOR COMMENT_COLOR OPTION_COLOR PLACEHOLDER_COLOR
 export -f PREVIEW 
 export -f LU_FILE
-
-fs="$(mktemp -u -p /tmp/$USER/tldr/ tldr_XXXXXX)" ; mkdir -p $fs # work directory
-COMMAND=$fs/command ; EXAMPLES=$fs/examples ; TO_EDIT=$fs/to_edit.tldr ; SCROLL=$fs/scroll
-:>$TO_EDIT
-
-[[ -e ~/.config/fzf-tldr ]] && source ~/.config/fzf-tldr # read configuration
 
 # fzf's refresh preview resets scroll position, https://github.com/junegunn/fzf/issues/3429
 # --bind "alt-k:execute-silent(echo up >>$SCROLL)+preview-up+refresh-preview,alt-j:execute-silent(echo down >>$SCROLL)+preview-down+refresh-preview" \
@@ -31,7 +31,7 @@ COMMAND=$fs/command ; EXAMPLES=$fs/examples ; TO_EDIT=$fs/to_edit.tldr ; SCROLL=
 [[ -s $EXAMPLES ]] && <$EXAMPLES fzf --tiebreak=index -m --ansi --query '' | \
 			perl -pe '/^\s*$/ and next ; $f and s/^(.*)\s+> // or do { $f++ ; s/^(.*)\s+> /# $1\n/ }' > $TO_EDIT
 
-grep '{{' $TO_EDIT >/dev/null && { $EDITOR -c 'set nospell|set ft=bash' +TldrNext $TO_EDIT || :>$TO_EDIT ; }
+grep '{{' $TO_EDIT >/dev/null && { $EDITOR -c 'set nospell|set ft=bash' -c '/{{.\{-}}}' $TO_EDIT || :>$TO_EDIT ; }
 
 [[ -s $TO_EDIT ]] && 
 	{
