@@ -1,0 +1,31 @@
+#!/bin/bash
+
+P=$(mktemp -p /tmp/$USER -u XXXXXXXX) 
+:>$P
+
+tmux new-window "fzf-tldr '' $P ; tmux wait -S fzf-tldr_$$"
+tmux wait fzf-tldr_$$
+
+commands=()
+
+echo "Execute [N|y] ? "
+perl -E 'say q~-~ x 79'
+
+while read c  ; do
+	printf  "%s\n" "$c"
+	commands+=("$c")
+done <$P
+
+read -sn1
+
+[[ "$REPLY" ==  y ]] && 
+	{
+	perl -E 'say q~-~ x 79'
+
+	for c in "${commands[@]}" ; do
+		eval "$c"
+		(( $? )) && { error=$? ; echo "exec-fzf-tldr: '$c' failed, aborting" ; exit $error ; }
+	done
+	}
+# vim: set ft=bash:
+

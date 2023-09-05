@@ -5,53 +5,51 @@ use v5.10 ;
 sub defined_or ;
 
 my ($file) = shift @ARGV ;
+my $fh ; $file eq '-' ? $fh = *STDIN : open $fh, "<", $file or die "color_tldr: can't open '$file'\n" ;
+
 my ( $flatten, $extra_line, $show_header, $header_color, $comment_color, $option_color, $placeholder_color ) = defined_or \@ARGV,
    ( 0,        0,           1,            37,            34,             33,            '1;33'             ) ;
 
 $extra_line = $extra_line ? "\n" : '' ;
 
-my $fh ; $file eq '-' ? $fh = *STDIN : open $fh, "<", $file or die "color_tldr: can't open '$file'\n" ;
-
+# read header end entries
 my @header ;
 /^-/ and @_ = ($_, <$fh>) or push @header, $_ while <$fh> ;
 
-my ($max_description_length, $max_example_length) = (0, 0) ;
-
-my @descriptions ;
+my ($max_description_length, @tldr_entries) = (0) ;
 
 while( @_ )
 	{
 	my $description = shift @_ ;
 	chomp $description ;
-
+	
 	$max_description_length = length $description if length $description > $max_description_length ;
-
+	
+	# parse examples
 	my @examples ;
 	while( @_ )
 		{
-		last if $_[0] =~ /^-/ ; # new entry
-
+		last if $_[0] =~ /^-/ ; # next entry
+		
 		$_ = shift @_ ;
 		s/^`// ;
 		s/`$// ;
 		next if /^\s*$/ ; 
-
-		$max_example_length = length $_ if length $_ > $max_example_length ;
-
+		
 		push @examples, $_ ;
 		}
-
-	push @descriptions, [$description, \@examples] ;
+	
+	push @tldr_entries, [$description, \@examples] ;
 	}
 
-do { shift @header ; shift @header ; print map { s/^..// ; "\e[${header_color}m$_\e[m" } @header } unless $flatten || !$show_header ;
+unless($flatten || !$show_header) { shift @header ; shift @header ; print map { s/^..// ; "\e[${header_color}m$_\e[m" } @header } ;
 
-for(@descriptions)
+for(@tldr_entries)
 	{
 	my ($description, $examples) = @$_ ;
-
+	
 	$flatten or say "\e[${comment_color}m# $description\e[m$extra_line" ;
-
+	
 	for (@$examples)
 		{
 		s/(\s-[^ ]+)/\e[${option_color}m$1\e[m/g ;
