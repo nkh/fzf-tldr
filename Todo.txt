@@ -1,7 +1,10 @@
 
+edit file
+
 scroll and select directly in first preview
 
-lxterminal --tabs={{tab_name1,tab_name2,...}}
+TldrFix can't handle:
+	lxterminal --tabs={{tab_name1,tab_name2,...}}
 
 import to file
 	different command?

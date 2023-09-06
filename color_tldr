@@ -7,8 +7,8 @@ sub defined_or ;
 my ($file) = shift @ARGV ;
 my $fh ; $file eq '-' ? $fh = *STDIN : open $fh, "<", $file or die "color_tldr: can't open '$file'\n" ;
 
-my ( $flatten, $extra_line, $show_header, $header_color, $comment_color, $option_color, $placeholder_color ) = defined_or \@ARGV,
-   ( 0,        0,           1,            37,            34,             33,            '1;33'             ) ;
+my ( $flatten, $extra_line, $show_header, $comment_head, $header_color, $comment_color, $option_color, $placeholder_color ) = defined_or \@ARGV,
+   ( 0,        0,           1,            '# ',          37,            34,             33,            '1;33'             ) ;
 
 $extra_line = $extra_line ? "\n" : '' ;
 
@@ -16,14 +16,15 @@ $extra_line = $extra_line ? "\n" : '' ;
 my @header ;
 /^-/ and @_ = ($_, <$fh>) or push @header, $_ while <$fh> ;
 
-my ($max_description_length, @tldr_entries) = (0) ;
+my ($max_comment_length, @tldr_entries) = (0) ;
 
 while( @_ )
 	{
-	my $description = shift @_ ;
-	chomp $description ;
-	
-	$max_description_length = length $description if length $description > $max_description_length ;
+	my $comment = shift @_ ;
+	chomp $comment ;
+	$comment =~s/^-\s*// ;
+
+	$max_comment_length = length $comment if length $comment > $max_comment_length ;
 	
 	# parse examples
 	my @examples ;
@@ -39,23 +40,23 @@ while( @_ )
 		push @examples, $_ ;
 		}
 	
-	push @tldr_entries, [$description, \@examples] ;
+	push @tldr_entries, [$comment, \@examples] ;
 	}
 
 unless($flatten || !$show_header) { shift @header ; shift @header ; print map { s/^..// ; "\e[${header_color}m$_\e[m" } @header } ;
 
 for(@tldr_entries)
 	{
-	my ($description, $examples) = @$_ ;
+	my ($comment, $examples) = @$_ ;
 	
-	$flatten or say "\e[${comment_color}m# $description\e[m$extra_line" ;
+	$flatten or say "\e[${comment_color}m$comment_head$comment\e[m$extra_line" ;
 	
 	for (@$examples)
 		{
 		s/(\s-[^ {]+)/\e[${option_color}m$1\e[m/g ;
 		s/( \{\{ .+? \}\} )/\e[${placeholder_color}m$1\e[m/xg ;
 		
-		$flatten and printf("\e[${comment_color}m%-${max_description_length}s > \e[m%s", $description, $_) 
+		$flatten and printf("\e[${comment_color}m%-${max_comment_length}s > \e[m%s", $comment, $_) 
 			 or  print "    $_" ;
 		}
 	
